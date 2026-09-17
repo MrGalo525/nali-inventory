@@ -110,10 +110,42 @@ $('authForm').addEventListener('submit',async e=>{
  if(error)msg(error.message);
 });
 $('signupBtn').onclick=async()=>{
- if(!sb)return msg("Configure Supabase first.");
- const {error}=await sb.auth.signUp({email:$('email').value,password:$('password').value});
- msg(error?error.message:"Account created. Check your email if confirmation is enabled, then sign in.");
+    if(!sb){
+        return msg("Supabase is not configured.");
+    }
+
+    const email = $('email').value.trim();
+    const password = $('password').value;
+
+    if(!email){
+        return msg("Please enter your email address.");
+    }
+
+    if(!password){
+        return msg("Please enter a password.");
+    }
+
+    if(password.length < 6){
+        return msg("Password must be at least 6 characters.");
+    }
+
+    const { data, error } = await sb.auth.signUp({
+        email: email,
+        password: password
+    });
+
+    if(error){
+        console.error("Signup error:", error);
+        return msg(error.message);
+    }
+
+    if(data.user){
+        msg("Account created successfully. Check your email if confirmation is required, then sign in.");
+    }else{
+        msg("Account creation was not completed. Please try again.");
+    }
 };
+ 
 $('logoutBtn').onclick=()=>sb.auth.signOut();
 
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
