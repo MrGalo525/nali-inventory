@@ -93,8 +93,8 @@ table{width:100%;border-collapse:collapse;margin-top:15px}th,td{text-align:left;
 </div></div>
 
 <script>
-const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
-const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY_HERE";
+const SUPABASE_URL = "https://bvmvtrglhjebhckxukuj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_eoCCsyRvZgmfl7OWv5TmVw_Dy5trtcK";
 const configured = !SUPABASE_URL.includes("PASTE_") && !SUPABASE_ANON_KEY.includes("PASTE_");
 const sb = configured ? supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
 let products=[], transactions=[];
