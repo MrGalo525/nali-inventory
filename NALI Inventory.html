@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NALI Inventory</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{font-family:Inter,Arial,sans-serif;color:#17202a;background:#f4f7fb}
+*{box-sizing:border-box}body{margin:0}.top{background:#0b5ed7;color:white;padding:18px 22px;display:flex;justify-content:space-between;align-items:center}
+.top h1{margin:0;font-size:22px}.wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+.card{background:white;border-radius:14px;padding:20px;box-shadow:0 3px 16px #0000000d;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.stat{padding:18px;border-radius:12px;background:#eef5ff}.stat b{font-size:28px;display:block;margin-top:6px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tab{border:0;padding:10px 14px;border-radius:9px;background:#e9eef5;cursor:pointer}.tab.active{background:#0b5ed7;color:white}
+.section{display:none}.section.active{display:block}form{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:end}
+label{font-size:13px;font-weight:600;display:block;margin-bottom:5px}input,select,button{width:100%;padding:10px;border:1px solid #ccd5df;border-radius:8px;font:inherit}
+button.primary{background:#0b5ed7;color:white;border:0;cursor:pointer}button.danger{background:#dc3545;color:#fff;border:0;width:auto;padding:8px 12px}
+table{width:100%;border-collapse:collapse;margin-top:15px}th,td{text-align:left;padding:10px;border-bottom:1px solid #edf0f3;font-size:14px}th{background:#f8fafc}
+.muted{color:#667085;font-size:13px}.login{max-width:420px;margin:70px auto}.hidden{display:none!important}.full{grid-column:1/-1}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}form{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.wrap{padding:0 10px}form{grid-template-columns:1fr}table{display:block;overflow:auto;white-space:nowrap}}
+</style>
+</head>
+<body>
+<div id="loginView" class="login card">
+<h2>NALI Inventory</h2><p class="muted">Sign in to manage stock and production.</p>
+<form id="authForm" style="display:block">
+<label>Email</label><input id="email" type="email" required>
+<label style="margin-top:10px">Password</label><input id="password" type="password" minlength="6" required>
+<div style="display:flex;gap:8px;margin-top:14px">
+<button class="primary" id="loginBtn" type="submit">Sign in</button>
+<button type="button" id="signupBtn">Create account</button>
+</div>
+<p id="authMsg" class="muted"></p>
+</form>
+</div>
+
+<div id="appView" class="hidden">
+<header class="top"><h1>NALI Inventory</h1><button style="width:auto;background:white;color:#0b5ed7;border:0" id="logoutBtn">Sign out</button></header>
+<div class="wrap">
+<div class="tabs">
+<button class="tab active" data-tab="dashboard">Dashboard</button>
+<button class="tab" data-tab="products">Products</button>
+<button class="tab" data-tab="transactions">Transactions</button>
+<button class="tab" data-tab="reports">Reports</button>
+</div>
+
+<section id="dashboard" class="section active">
+<div class="grid">
+<div class="stat">Products<b id="statProducts">0</b></div>
+<div class="stat">Units in stock<b id="statStock">0</b></div>
+<div class="stat">Units sold<b id="statSold">0</b></div>
+<div class="stat">Units manufactured<b id="statMade">0</b></div>
+</div>
+<div class="card"><h3>Current Stock</h3><div id="stockTable"></div></div>
+</section>
+
+<section id="products" class="section">
+<div class="card"><h3>Add Product</h3>
+<form id="productForm">
+<div><label>SKU</label><input id="sku" required placeholder="W500"></div>
+<div><label>Product name</label><input id="productName" required placeholder="500ml Nali Water"></div>
+<div><label>Category</label><select id="category"><option>Raw Material</option><option>Empty Bottle</option><option>Finished Water</option></select></div>
+<div><label>Minimum stock</label><input id="minimumStock" type="number" min="0" value="0"></div>
+<button class="primary" type="submit">Add product</button>
+</form></div>
+<div class="card"><h3>Product List</h3><div id="productsTable"></div></div>
+</section>
+
+<section id="transactions" class="section">
+<div class="card"><h3>Record Stock Movement</h3>
+<p class="muted">Do not edit stock totals manually. Record every movement as a transaction.</p>
+<form id="txForm">
+<div><label>Product</label><select id="txProduct" required></select></div>
+<div><label>Date</label><input id="txDate" type="date" required></div>
+<div><label>Transaction type</label><select id="txType">
+<option>Purchase</option><option>Manufactured</option><option>Production Loss</option><option>Filled</option><option>Sold</option><option>Damaged</option><option>Adjustment In</option><option>Adjustment Out</option>
+</select></div>
+<div><label>Quantity</label><input id="txQty" type="number" min="1" required></div>
+<div><label>Reference</label><input id="txRef" placeholder="INV-001 / BATCH-001"></div>
+<div><label>Notes</label><input id="txNotes" placeholder="Optional"></div>
+<button class="primary" type="submit">Save transaction</button>
+</form></div>
+<div class="card"><h3>Recent Transactions</h3><div id="transactionsTable"></div></div>
+</section>
+
+<section id="reports" class="section">
+<div class="card"><h3>Export data</h3><p class="muted">Download your transaction history as CSV for Excel analysis.</p>
+<button class="primary" style="width:auto" id="exportBtn">Export transactions CSV</button>
+</div>
+<div class="card"><h3>Monthly Summary</h3><div id="monthlyTable"></div></div>
+</section>
+</div></div>
+
+<script>
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY_HERE";
+const configured = !SUPABASE_URL.includes("PASTE_") && !SUPABASE_ANON_KEY.includes("PASTE_");
+const sb = configured ? supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
+let products=[], transactions=[];
+
+const $=id=>document.getElementById(id);
+function msg(t){$('authMsg').textContent=t}
+function today(){return new Date().toISOString().slice(0,10)}
+$('txDate').value=today();
+
+$('authForm').addEventListener('submit',async e=>{
+ e.preventDefault(); if(!sb)return msg("First add your Supabase URL and publishable key in index.html.");
+ const {error}=await sb.auth.signInWithPassword({email:$('email').value,password:$('password').value});
+ if(error)msg(error.message);
+});
+$('signupBtn').onclick=async()=>{
+ if(!sb)return msg("Configure Supabase first.");
+ const {error}=await sb.auth.signUp({email:$('email').value,password:$('password').value});
+ msg(error?error.message:"Account created. Check your email if confirmation is enabled, then sign in.");
+};
+$('logoutBtn').onclick=()=>sb.auth.signOut();
+
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));$(b.dataset.tab).classList.add('active');
+});
+
+async function load(){
+ if(!sb)return;
+ const {data:p,error:pe}=await sb.from('products').select('*').order('name');
+ if(pe)return alert(pe.message);
+ const {data:t,error:te}=await sb.from('transactions').select('*,products(name,sku)').order('transaction_date',{ascending:false}).order('id',{ascending:false});
+ if(te)return alert(te.message);
+ products=p||[];transactions=t||[];render();
+}
+function signedType(type){
+ return ['Purchase','Manufactured','Filled','Adjustment In'].includes(type)?1:-1;
+}
+function stockFor(id){
+ return transactions.filter(t=>t.product_id===id).reduce((sum,t)=>sum+(signedType(t.transaction_type)*t.quantity),0);
+}
+function render(){
+ $('statProducts').textContent=products.length;
+ $('statStock').textContent=products.reduce((s,p)=>s+Math.max(0,stockFor(p.id)),0).toLocaleString();
+ $('statSold').textContent=transactions.filter(t=>t.transaction_type==='Sold').reduce((s,t)=>s+t.quantity,0).toLocaleString();
+ $('statMade').textContent=transactions.filter(t=>t.transaction_type==='Manufactured').reduce((s,t)=>s+t.quantity,0).toLocaleString();
+
+ $('txProduct').innerHTML=products.map(p=>`<option value="${p.id}">${esc(p.sku)} — ${esc(p.name)}</option>`).join('');
+ $('productsTable').innerHTML=`<table><tr><th>SKU</th><th>Name</th><th>Category</th><th>Stock</th><th>Minimum</th></tr>`+
+ products.map(p=>`<tr><td>${esc(p.sku)}</td><td>${esc(p.name)}</td><td>${esc(p.category)}</td><td>${stockFor(p.id).toLocaleString()}</td><td>${p.minimum_stock}</td></tr>`).join('')+`</table>`;
+ $('stockTable').innerHTML=`<table><tr><th>SKU</th><th>Product</th><th>Stock</th><th>Status</th></tr>`+
+ products.map(p=>{let s=stockFor(p.id);let status=s<=p.minimum_stock?'LOW':'OK';return `<tr><td>${esc(p.sku)}</td><td>${esc(p.name)}</td><td>${s.toLocaleString()}</td><td>${status}</td></tr>`}).join('')+`</table>`;
+ $('transactionsTable').innerHTML=`<table><tr><th>Date</th><th>Product</th><th>Type</th><th>Qty</th><th>Reference</th><th>Notes</th></tr>`+
+ transactions.slice(0,100).map(t=>`<tr><td>${t.transaction_date}</td><td>${esc(t.products?.name||'')}</td><td>${esc(t.transaction_type)}</td><td>${t.quantity.toLocaleString()}</td><td>${esc(t.reference_no||'')}</td><td>${esc(t.notes||'')}</td></tr>`).join('')+`</table>`;
+ renderMonthly();
+}
+function renderMonthly(){
+ const m={};
+ transactions.forEach(t=>{const k=t.transaction_date.slice(0,7);if(!m[k])m[k]={made:0,sold:0,loss:0};if(t.transaction_type==='Manufactured')m[k].made+=t.quantity;if(t.transaction_type==='Sold')m[k].sold+=t.quantity;if(['Production Loss','Damaged'].includes(t.transaction_type))m[k].loss+=t.quantity});
+ $('monthlyTable').innerHTML=`<table><tr><th>Month</th><th>Manufactured</th><th>Sold</th><th>Loss/Damaged</th></tr>`+
+ Object.entries(m).sort().reverse().map(([k,v])=>`<tr><td>${k}</td><td>${v.made.toLocaleString()}</td><td>${v.sold.toLocaleString()}</td><td>${v.loss.toLocaleString()}</td></tr>`).join('')+`</table>`;
+}
+$('productForm').onsubmit=async e=>{
+ e.preventDefault();const {data:u}=await sb.auth.getUser();if(!u.user)return;
+ const {error}=await sb.from('products').insert({user_id:u.user.id,sku:$('sku').value.trim(),name:$('productName').value.trim(),category:$('category').value,minimum_stock:Number($('minimumStock').value)});
+ if(error)alert(error.message);else{e.target.reset();$('minimumStock').value=0;await load();}
+};
+$('txForm').onsubmit=async e=>{
+ e.preventDefault();const {data:u}=await sb.auth.getUser();if(!u.user)return;
+ const {error}=await sb.from('transactions').insert({user_id:u.user.id,product_id:Number($('txProduct').value),transaction_date:$('txDate').value,transaction_type:$('txType').value,quantity:Number($('txQty').value),reference_no:$('txRef').value.trim()||null,notes:$('txNotes').value.trim()||null});
+ if(error)alert(error.message);else{e.target.reset();$('txDate').value=today();await load();}
+};
+$('exportBtn').onclick=()=>{
+ const rows=[['Date','SKU','Product','Type','Quantity','Reference','Notes']];
+ transactions.forEach(t=>rows.push([t.transaction_date,t.products?.sku||'',t.products?.name||'',t.transaction_type,t.quantity,t.reference_no||'',t.notes||'']));
+ const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='nali_transactions.csv';a.click();
+};
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+async function start(){
+ if(!configured)return;
+ const {data}=await sb.auth.getSession();if(data.session){$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');await load();}
+ sb.auth.onAuthStateChange((_event,session)=>{if(session){$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');load()}else{$('loginView').classList.remove('hidden');$('appView').classList.add('hidden')}});
+}
+start();
+</script>
+</body></html>
