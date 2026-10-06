@@ -10,17 +10,7 @@ Free architecture:
 - index.html: complete web application
 - supabase.sql: database tables + security policies
 
-## Setup
-1. Create a free Supabase project.
-2. Open SQL Editor and run supabase.sql.
-3. In Supabase Project Settings/API, copy the Project URL and publishable/anon key.
-4. In index.html replace:
-   PASTE_YOUR_SUPABASE_URL_HERE
-   PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY_HERE
-5. Create a public GitHub repository named nali-inventory.
-6. Upload index.html and supabase.sql.
-7. GitHub: Settings > Pages > Build and deployment > Source > Deploy from branch > main > / (root) > Save.
-8. Open the generated GitHub Pages URL.
+
 
 ## Important security note
 Only put the Supabase publishable/anon key in index.html. NEVER put a Supabase service-role/secret key in browser code. The SQL enables Row Level Security so users can only access rows belonging to their own authenticated account.
